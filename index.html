@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Full-Stack | Terminal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="glitch-text">SYS.QUIZ_FULLSTACK</h1>
+            <nav class="controls">
+                <button id="btn-todas" class="nav-btn active">Banco de Questões</button>
+                <button id="btn-simulado" class="nav-btn">Gerar Simulado (20 Qs)</button>
+            </nav>
+        </header>
+
+        <main>
+            <div id="status-panel" class="status-panel hidden">
+                <p>Status: <span id="simulado-stats">Ativo</span></p>
+                <button id="btn-finalizar" class="action-btn hidden">Finalizar Simulado</button>
+            </div>
+            
+            <div id="quiz-container">
+                </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
