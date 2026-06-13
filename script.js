@@ -3,7 +3,7 @@
 
 // ATENÇÃO: Troque esta URL pela URL do Render quando colocar o backend no ar.
 // Exemplo: const socket = io('https://hootka-backend.onrender.com');
-const socket = io('http://localhost:3000'); 
+const socket = io('https://quiz-fullstack-2nn9.onrender.com'); 
 
 // Mapeamento de Telas
 const screens = {
