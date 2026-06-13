@@ -4,10 +4,21 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+
+// 1. Libera o CORS para o seu GitHub Pages no Express
+app.use(cors({
+    origin: "https://gutierrezgomes.github.io",
+    methods: ["GET", "POST"]
+}));
+
 const server = http.createServer(app);
+
+// 2. Libera o CORS para o seu GitHub Pages no Socket.IO
 const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: { 
+        origin: "https://gutierrezgomes.github.io",
+        methods: ["GET", "POST"]
+    }
 });
 
 // Estado em memória do jogo
