@@ -111,7 +111,6 @@ const questoesDB = [
     { id: 80, tipo: 'dissertativa', pergunta: "Qual é a lição pedagógica do livro ao apresentar três projetos com complexidade crescente?", respostaExata: "Mostrar como os mesmos conceitos (CRUD, banco, segurança, frontend/backend) se aplicam evoluindo de Node.js + HTML simples, passando por MVC com Java, até atingir o padrão SPA React + Spring Boot + JWT." }
 ];
 
-
 // Função auxiliar para embaralhar os arrays (Fisher-Yates)
 function shuffleArray(array) {
     const arr = [...array];
@@ -122,27 +121,23 @@ function shuffleArray(array) {
     return arr;
 }
 
-// Lógica principal do servidor para gerar a prova e verificar as respostas
+// Sorteia e retorna 10 questões objetivas e 4 dissertativas
 function generateSimulado() {
     let objetivas = questoesDB.filter(q => q.tipo === 'objetiva');
     let dissertativas = questoesDB.filter(q => q.tipo === 'dissertativa');
 
-    // Embaralha as questões de forma segura
     objetivas = shuffleArray(objetivas);
     dissertativas = shuffleArray(dissertativas);
 
-    // Pega 10 objetivas e 4 dissertativas
     const selecionadas = [
         ...objetivas.slice(0, 10),
         ...dissertativas.slice(0, 4)
     ];
 
-    // Embaralha a prova final para misturar os tipos de questão
     return shuffleArray(selecionadas);
 }
-
 // Configuração do Socket.io para o Front-end
-const socket = io('https://quiz-fullstack-2nn9.onrender.com');
+const socket = io ('https://quiz-fullstack-2nn9.onrender.com');
 
 const screens = {
     lobby: document.getElementById('lobby-screen'),
