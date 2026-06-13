@@ -26,6 +26,7 @@ let gameState = 'LOBBY';
 let currentQuestionIndex = 0;
 let currentQuestions = [];
 
+
 // BANCO DE DADOS - AS 80 QUESTÕES COMPLETAS
 const questoesDB = [
     { id: 1, tipo: 'objetiva', pergunta: "Qual ferramenta é recomendada para instalar e gerenciar múltiplas versões do Node.js?", opcoes: ["O npm (Node Package Manager), que gerencia os pacotes localmente.", "O nvm (Node Version Manager). No Linux/Mac instala-se via curl e permite trocar de versão facilmente com nvm use --lts.", "O npx, utilizado para executar dependências temporárias sem instalação.", "O Yarn, que substitui o Node.js em ambientes de produção."], correta: 1 },
@@ -135,6 +136,7 @@ function generateSimulado() {
 
     return shuffleArray(selecionadas);
 }
+
 // --- LÓGICA DO SERVIDOR ---
 io.on('connection', (socket) => {
     console.log('Novo usuário conectado:', socket.id);
@@ -150,8 +152,63 @@ io.on('connection', (socket) => {
         io.emit('update_players', Object.values(players));
     });
 
-    // Adicione os outros eventos do seu jogo aqui (start_game, submit_answer, etc)
-    // ...
+    // 1. EVENTO: Alguém clicou em "INICIAR HOOTKA!"
+    socket.on('start_game', () => {
+        if (gameState === 'LOBBY') {
+            gameState = 'PLAYING';
+            currentQuestions = generateSimulado(); 
+            currentQuestionIndex = 0;
+
+            // Avisa TODOS os jogadores que o jogo começou (para tirá-los da sala de espera)
+            io.emit('game_started'); 
+            
+            enviarProximaPergunta();
+        }
+    });
+
+    // 2. EVENTO: Alguém enviou uma resposta
+    socket.on('submit_answer', (respostaTexto) => {
+        const questaoAtual = currentQuestions[currentQuestionIndex];
+        let respostaCorreta = "";
+
+        if (questaoAtual.tipo === 'objetiva') {
+            respostaCorreta = questaoAtual.opcoes[questaoAtual.correta];
+            if (respostaTexto === respostaCorreta) {
+                if(players[socket.id]) players[socket.id].score += 10;
+            }
+        } else {
+            respostaCorreta = questaoAtual.respostaExata;
+        }
+
+        socket.emit('answer_result', { 
+            tipo: questaoAtual.tipo, 
+            correta: respostaCorreta 
+        });
+
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                enviarProximaPergunta();
+            } else {
+                gameState = 'LOBBY';
+                const ranking = Object.values(players).sort((a, b) => b.score - a.score);
+                io.emit('game_over', ranking);
+            }
+        }, 3000); 
+    });
+
+    // Função auxiliar para mandar a pergunta para o front
+    function enviarProximaPergunta() {
+        const q = currentQuestions[currentQuestionIndex];
+        io.emit('new_question', {
+            index: currentQuestionIndex + 1,
+            total: currentQuestions.length,
+            pergunta: q.pergunta,
+            tipo: q.tipo,
+            opcoes: q.opcoes, // Envia as opções para o front montar os botões
+            correta: q.correta 
+        });
+    }
 
     // Evento de desconexão
     socket.on('disconnect', () => {
@@ -162,7 +219,6 @@ io.on('connection', (socket) => {
 });
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
-// Isso é obrigatório para o Render saber qual porta escutar!
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);

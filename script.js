@@ -34,6 +34,11 @@ document.getElementById('btn-start').addEventListener('click', () => {
     socket.emit('start_game');
 });
 
+// Remove a tela de espera para todos quando o jogo inicia
+socket.on('game_started', () => {
+    showScreen('game');
+});
+
 // 3. O JOGO
 socket.on('new_question', (q) => {
     showScreen('game');
@@ -52,14 +57,18 @@ socket.on('new_question', (q) => {
         q.opcoes.forEach((opcao) => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
-            btn.innerText = opcao.texto;
-            // Quando clica, pinta de roxo para o jogador saber que clicou, e envia pro servidor
+            
+            // CORREÇÃO: "opcao" já é o texto diretamente, não "opcao.texto"
+            btn.innerText = opcao; 
+            
             btn.onclick = () => {
                 const botoes = document.querySelectorAll('.option-btn');
-                botoes.forEach(b => b.disabled = true); // Bloqueia outros botões
+                botoes.forEach(b => b.disabled = true); 
                 btn.style.borderColor = "var(--neon-violet)";
                 btn.style.backgroundColor = "rgba(138, 43, 226, 0.2)";
-                enviarResposta(opcao.texto);
+                
+                // CORREÇÃO: envia o texto correto
+                enviarResposta(opcao); 
             };
             optContainer.appendChild(btn);
         });
@@ -76,13 +85,12 @@ socket.on('answer_result', (data) => {
         const botoes = document.querySelectorAll('.option-btn');
         botoes.forEach(b => {
             if (b.innerText === data.correta) {
-                b.classList.add('correct'); // Pinta a certa de verde
+                b.classList.add('correct'); // Pinta a certa de verde (precisa do CSS .correct)
             } else if (b.style.borderColor === "var(--neon-violet)") {
-                b.classList.add('incorrect'); // Se ele clicou na errada, fica vermelho
+                b.classList.add('incorrect'); // Pinta a errada (precisa do CSS .incorrect)
             }
         });
     } else {
-        // Se for dissertativa, apenas mostra um alerta com o gabarito
         alert("Gabarito da Dissertativa: \n\n" + data.correta);
     }
 });
