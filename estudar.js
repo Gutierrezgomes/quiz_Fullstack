@@ -186,3 +186,47 @@ function iniciarModoEstudo() {
 
 // Inicia automaticamente o sistema
 iniciarModoEstudo();
+// ==========================================
+// LÓGICA DOS MÓDULOS (Substitua no final do estudar.js)
+// ==========================================
+
+const btnMod1 = document.getElementById('btn-mod1');
+const btnMod2 = document.getElementById('btn-mod2');
+
+// Função que carrega apenas as questões do módulo selecionado
+function carregarModulo(inicio, fim, botaoAtivo) {
+    quizContainer.innerHTML = ''; // Limpa a tela
+    
+    // Atualiza a cor dos botões (deixa o selecionado ativo)
+    btnMod1.classList.remove('active');
+    btnMod2.classList.remove('active');
+    botaoAtivo.classList.add('active');
+
+    // Corta o banco de dados (Ex: Pega do índice 0 até o 40, ou do 40 ao 80)
+    const questoesDoModulo = questoesDB.slice(inicio, fim);
+
+    // Renderiza as questões na tela
+    questoesDoModulo.forEach((q) => {
+        // Usamos o q.id para manter o número real da questão (ex: Questão 41, 42...)
+        if (q.tipo === 'objetiva') {
+            quizContainer.appendChild(renderObjetiva(q, q.id));
+        } else {
+            quizContainer.appendChild(renderDissertativa(q, q.id));
+        }
+    });
+    
+    // Sobe a tela suavemente ao trocar de módulo
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Escutadores de cliques dos botões
+btnMod1.addEventListener('click', () => {
+    carregarModulo(0, 40, btnMod1);
+});
+
+btnMod2.addEventListener('click', () => {
+    carregarModulo(40, 80, btnMod2);
+});
+
+// Inicia a página já carregando o Módulo 1 por padrão
+carregarModulo(0, 40, btnMod1);
