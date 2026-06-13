@@ -125,44 +125,151 @@ function generateSimulado() {
     let objetivas = questoesDB.filter(q => q.tipo === 'objetiva');
     let dissertativas = questoesDB.filter(q => q.tipo === 'dissertativa');
 
+    // Embaralha as questões de forma segura
     objetivas = shuffleArray(objetivas);
     dissertativas = shuffleArray(dissertativas);
 
+    // Pega 10 objetivas e 4 dissertativas
     const selecionadas = [
         ...objetivas.slice(0, 10),
         ...dissertativas.slice(0, 4)
     ];
 
+    // Embaralha a prova final para misturar os tipos de questão
     return shuffleArray(selecionadas);
 }
+
 // --- LÓGICA DO SERVIDOR ---
 io.on('connection', (socket) => {
     console.log('Novo usuário conectado:', socket.id);
 
     // Evento quando um jogador entra no lobby
     socket.on('join_game', (data) => {
+        if (gameState !== 'LOBBY') return socket.emit('error', 'O jogo já começou! Espere a próxima partida.');
+        
         players[socket.id] = {
+            id: socket.id,
             name: data.name,
             avatar: data.avatar,
-            score: 0
+            score: 0,
+            answered: false,
+            isReady: false // Variável para controlar o estado de "pronto"
         };
-        // Avisa a todos quem está na sala
+        // Avisa a todos quem está na sala e os status
         io.emit('update_players', Object.values(players));
     });
 
-    // Adicione os outros eventos do seu jogo aqui (start_game, submit_answer, etc)
-    // ...
+    // Evento acionado quando o jogador clica em "Estou Pronto"
+    socket.on('toggle_ready', () => {
+        const player = players[socket.id];
+        if (!player) return;
+
+        // Inverte o status de pronto do jogador (true vira false, e vice-versa)
+        player.isReady = !player.isReady;
+        
+        // Atualiza a tela de todo mundo com o novo status
+        io.emit('update_players', Object.values(players));
+
+        // Obtém a lista com todos os jogadores
+        const playersList = Object.values(players);
+        
+        // Verifica se há pelo menos um jogador na sala e se TODOS estão com isReady === true
+        const allReady = playersList.length > 0 && playersList.every(p => p.isReady);
+
+        // A MÁGICA: Se todos estiverem prontos, a partida inicia automaticamente
+        if (allReady && gameState === 'LOBBY') {
+            gameState = 'PLAYING';
+            currentQuestions = generateSimulado();
+            currentQuestionIndex = 0;
+            
+            // Reseta a pontuação e os status para que fiquem limpos no próximo jogo
+            for(let id in players) {
+                players[id].score = 0;
+                players[id].isReady = false; 
+            }
+            
+            // Avisa o front-end que o jogo começou e envia a primeira pergunta
+            io.emit('game_started');
+            sendQuestion();
+        }
+    });
+
+    // Recebe e contabiliza as respostas
+    socket.on('submit_answer', (answerText) => {
+        const player = players[socket.id];
+        if (!player || player.answered) return;
+        
+        player.answered = true;
+        const q = currentQuestions[currentQuestionIndex];
+
+        if (q.tipo === 'objetiva') {
+            const textoCorreto = q.opcoes[q.correta];
+            if (answerText === textoCorreto) player.score += 100;
+        } else {
+            // Regra simples: ganha 50 pontos se escrever pelo menos algo válido
+            if (answerText.trim().length > 5) player.score += 50; 
+        }
+        
+        // Verifica se todos já enviaram a resposta da rodada atual
+        const allAnswered = Object.values(players).every(p => p.answered);
+        if (allAnswered) {
+            const gabarito = q.tipo === 'objetiva' ? q.opcoes[q.correta] : q.respostaExata;
+            // Libera a tela mostrando o gabarito para todos
+            io.emit('answer_result', { tipo: q.tipo, correta: gabarito });
+            
+            // Aguarda 4 segundos e chama a próxima pergunta
+            setTimeout(nextQuestion, 4000); 
+        }
+    });
 
     // Evento de desconexão
     socket.on('disconnect', () => {
         console.log('Usuário desconectado:', socket.id);
         delete players[socket.id];
         io.emit('update_players', Object.values(players));
+        
+        // Se a sala esvaziar completamente no meio do jogo, reseta para LOBBY
+        if (Object.keys(players).length === 0) gameState = 'LOBBY';
     });
 });
 
+// Funções utilitárias de roteamento das perguntas
+function sendQuestion() {
+    // Reseta o status de resposta para a nova rodada
+    for(let id in players) players[id].answered = false;
+    
+    const q = currentQuestions[currentQuestionIndex];
+    let opcoesEmbaralhadas = null;
+    
+    if (q.tipo === 'objetiva') {
+        const opcoesObjetos = q.opcoes.map((texto, index) => ({ texto, isCorreta: index === q.correta }));
+        opcoesEmbaralhadas = shuffleArray(opcoesObjetos);
+    }
+
+    io.emit('new_question', {
+        index: currentQuestionIndex + 1,
+        total: currentQuestions.length,
+        tipo: q.tipo,
+        pergunta: q.pergunta,
+        // Envia apenas o texto das opções para o front, sem a resposta correta
+        opcoes: q.tipo === 'objetiva' ? opcoesEmbaralhadas.map(o => o.texto) : null 
+    });
+}
+
+function nextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex >= currentQuestions.length) {
+        // Acabaram as questões, exibe o ranking
+        gameState = 'LEADERBOARD';
+        io.emit('game_over', Object.values(players).sort((a, b) => b.score - a.score));
+        gameState = 'LOBBY'; // Libera para jogar de novo
+    } else {
+        // Envia a próxima
+        sendQuestion();
+    }
+}
+
 // --- INICIALIZAÇÃO DO SERVIDOR ---
-// Isso é obrigatório para o Render saber qual porta escutar!
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
