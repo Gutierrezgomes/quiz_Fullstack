@@ -142,14 +142,54 @@ io.on('connection', (socket) => {
     console.log('Novo usuário conectado:', socket.id);
 
     // Evento quando um jogador entra no lobby
+    io.on('connection', (socket) => {
     socket.on('join_game', (data) => {
-        players[socket.id] = {
-            name: data.name,
-            avatar: data.avatar,
-            score: 0
+        if (gameState !== 'LOBBY') return socket.emit('error', 'O jogo já começou!');
+        
+        // Adicionamos a propriedade isReady: false
+        players[socket.id] = { 
+            id: socket.id, 
+            name: data.name, 
+            avatar: data.avatar, 
+            score: 0, 
+            answered: false,
+            isReady: false 
         };
-        // Avisa a todos quem está na sala
         io.emit('update_players', Object.values(players));
+    });
+
+    // NOVO EVENTO: Alterna o status de "Pronto" do jogador
+    socket.on('toggle_ready', () => {
+        const player = players[socket.id];
+        if (!player) return;
+
+        // Inverte o status (de falso pra verdadeiro e vice-versa)
+        player.isReady = !player.isReady;
+        
+        // Atualiza a tela de todos para mostrar quem está pronto
+        io.emit('update_players', Object.values(players));
+
+        // Pega a lista de jogadores
+        const playersList = Object.values(players);
+        
+        // Verifica se tem alguém na sala E se TODOS estão prontos
+        const allReady = playersList.length > 0 && playersList.every(p => p.isReady);
+
+        if (allReady && gameState === 'LOBBY') {
+            gameState = 'PLAYING';
+            currentQuestions = generateSimulado();
+            currentQuestionIndex = 0;
+            
+            // Zera os placares para o novo jogo
+            for(let id in players) {
+                players[id].score = 0;
+                players[id].isReady = false; // Reseta para a próxima partida
+            }
+            
+            // Avisa o front-end que o jogo começou e envia a primeira pergunta
+            io.emit('game_started');
+            sendQuestion();
+        }
     });
 
     // 1. EVENTO: Alguém clicou em "INICIAR HOOTKA!"
@@ -167,18 +207,34 @@ io.on('connection', (socket) => {
     });
 
     // 2. EVENTO: Alguém enviou uma resposta
-    socket.on('submit_answer', (respostaTexto) => {
-        const questaoAtual = currentQuestions[currentQuestionIndex];
-        let respostaCorreta = "";
+    socket.on('submit_answer', (answerText) => {
+        const player = players[socket.id];
+        if (!player || player.answered) return;
+        
+        player.answered = true;
+        const q = currentQuestions[currentQuestionIndex];
 
-        if (questaoAtual.tipo === 'objetiva') {
-            respostaCorreta = questaoAtual.opcoes[questaoAtual.correta];
-            if (respostaTexto === respostaCorreta) {
-                if(players[socket.id]) players[socket.id].score += 10;
-            }
+        if (q.tipo === 'objetiva') {
+            const textoCorreto = q.opcoes[q.correta];
+            if (answerText === textoCorreto) player.score += 100;
         } else {
-            respostaCorreta = questaoAtual.respostaExata;
+            if (answerText.trim().length > 5) player.score += 50; 
         }
+        
+        const allAnswered = Object.values(players).every(p => p.answered);
+        if (allAnswered) {
+            const gabarito = q.tipo === 'objetiva' ? q.opcoes[q.correta] : q.respostaExata;
+            io.emit('answer_result', { tipo: q.tipo, correta: gabarito });
+            setTimeout(nextQuestion, 4000); 
+        }
+    });
+
+    socket.on('disconnect', () => {
+        delete players[socket.id];
+        io.emit('update_players', Object.values(players));
+        if (Object.keys(players).length === 0) gameState = 'LOBBY';
+    });
+});
 
         socket.emit('answer_result', { 
             tipo: questaoAtual.tipo, 
@@ -216,7 +272,7 @@ io.on('connection', (socket) => {
         delete players[socket.id];
         io.emit('update_players', Object.values(players));
     });
-});
+
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
