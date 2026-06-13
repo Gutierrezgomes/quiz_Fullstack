@@ -138,6 +138,10 @@ function generateSimulado() {
     // Embaralha a prova final para misturar os tipos de questão
     return shuffleArray(selecionadas);
 }
+// Arquitetura de Salas
+let rooms = {};
+let roomCounter = 1;
+let socketMapping = {};
 
 // --- LÓGICA DO SERVIDOR ---
 io.on('connection', (socket) => {
@@ -145,100 +149,166 @@ io.on('connection', (socket) => {
 
     // Evento quando um jogador entra no lobby
     socket.on('join_game', (data) => {
-        if (gameState !== 'LOBBY') return socket.emit('error', 'O jogo já começou! Espere a próxima partida.');
+        const playerId = data.playerId; // Recebido do frontend (sessionStorage)
+        let roomId = null;
+
+        // Verifica se o jogador já estava em uma sala
+        for (let id in rooms) {
+            if (rooms[id].players[playerId]) {
+                roomId = id;
+                break;
+            }
+        }
+
+        // Se encontrou a sala e estava jogando, reconecta!
+        if (roomId) {
+            const room = rooms[roomId];
+            const player = room.players[playerId];
+            player.online = true;
+            socket.join(roomId);
+            socketMapping[socket.id] = { roomId, playerId };
+            
+            // Envia o estado atual para o jogador que voltou
+            socket.emit('reconnected', {
+                gameState: room.gameState,
+                players: Object.values(room.players),
+                currentQuestion: room.currentQuestions[room.currentQuestionIndex],
+                questionIndex: room.currentQuestionIndex,
+                totalQuestions: room.currentQuestions.length,
+                timeLeft: room.timeLeft,
+                hasAnswered: player.answered
+            });
+            
+            io.to(roomId).emit('update_players', Object.values(room.players));
+            return;
+        }
+
+        // Se não estava em sala, procura uma no Lobby
+        for (let id in rooms) {
+            if (rooms[id].gameState === 'LOBBY') {
+                roomId = id;
+                break;
+            }
+        }
         
-        players[socket.id] = {
-            id: socket.id,
-            name: data.name,
-            avatar: data.avatar,
-            score: 0,
+        // Se não achou lobby, cria nova
+        if (!roomId) {
+            roomId = 'room_' + roomCounter++;
+            rooms[roomId] = {
+                id: roomId,
+                players: {},
+                gameState: 'LOBBY',
+                currentQuestions: [],
+                currentQuestionIndex: 0,
+                timer: null,
+                timeLeft: 0
+            };
+        }
+
+        socket.join(roomId);
+        socketMapping[socket.id] = { roomId, playerId };
+
+        const room = rooms[roomId];
+        room.players[playerId] = { 
+            id: playerId, 
+            name: data.name, 
+            avatar: data.avatar, 
+            score: 0, 
             answered: false,
-            isReady: false // Variável para controlar o estado de "pronto"
+            isReady: false,
+            online: true
         };
-        // Avisa a todos quem está na sala e os status
-        io.emit('update_players', Object.values(players));
+        
+        io.to(roomId).emit('update_players', Object.values(room.players));
     });
 
-    // Evento acionado quando o jogador clica em "Estou Pronto"
     socket.on('toggle_ready', () => {
-        const player = players[socket.id];
-        if (!player) return;
+        const mapping = socketMapping[socket.id];
+        if (!mapping) return;
+        const room = rooms[mapping.roomId];
+        const player = room.players[mapping.playerId];
 
-        // Inverte o status de pronto do jogador (true vira false, e vice-versa)
         player.isReady = !player.isReady;
-        
-        // Atualiza a tela de todo mundo com o novo status
-        io.emit('update_players', Object.values(players));
+        io.to(room.id).emit('update_players', Object.values(room.players));
 
-        // Obtém a lista com todos os jogadores
-        const playersList = Object.values(players);
-        
-        // Verifica se há pelo menos um jogador na sala e se TODOS estão com isReady === true
+        const playersList = Object.values(room.players).filter(p => p.online);
         const allReady = playersList.length > 0 && playersList.every(p => p.isReady);
 
-        // A MÁGICA: Se todos estiverem prontos, a partida inicia automaticamente
-        if (allReady && gameState === 'LOBBY') {
-            gameState = 'PLAYING';
-            currentQuestions = generateSimulado();
-            currentQuestionIndex = 0;
+        if (allReady && room.gameState === 'LOBBY') {
+            room.gameState = 'PLAYING';
+            room.currentQuestions = generateSimulado();
+            room.currentQuestionIndex = 0;
             
-            // Reseta a pontuação e os status para que fiquem limpos no próximo jogo
-            for(let id in players) {
-                players[id].score = 0;
-                players[id].isReady = false; 
+            for(let id in room.players) {
+                room.players[id].score = 0;
+                room.players[id].isReady = false; 
             }
             
-            // Avisa o front-end que o jogo começou e envia a primeira pergunta
-            io.emit('game_started');
-            sendQuestion();
+            io.to(room.id).emit('game_started');
+            sendQuestion(room.id);
         }
     });
 
-    // Recebe e contabiliza as respostas
     socket.on('submit_answer', (answerText) => {
-        const player = players[socket.id];
-        if (!player || player.answered) return;
+        const mapping = socketMapping[socket.id];
+        if (!mapping) return;
+        const room = rooms[mapping.roomId];
+        const player = room.players[mapping.playerId];
+        
+        if (!player || player.answered || room.gameState !== 'WAITING_ANSWERS') return;
         
         player.answered = true;
-        const q = currentQuestions[currentQuestionIndex];
+        const q = room.currentQuestions[room.currentQuestionIndex];
 
         if (q.tipo === 'objetiva') {
             const textoCorreto = q.opcoes[q.correta];
             if (answerText === textoCorreto) player.score += 100;
         } else {
-            // Regra simples: ganha 50 pontos se escrever pelo menos algo válido
             if (answerText.trim().length > 5) player.score += 50; 
         }
         
-        // Verifica se todos já enviaram a resposta da rodada atual
-        const allAnswered = Object.values(players).every(p => p.answered);
+        // Verifica se todos os jogadores ONLINE responderam
+        const activePlayers = Object.values(room.players).filter(p => p.online);
+        const allAnswered = activePlayers.every(p => p.answered);
+        
         if (allAnswered) {
-            const gabarito = q.tipo === 'objetiva' ? q.opcoes[q.correta] : q.respostaExata;
-            // Libera a tela mostrando o gabarito para todos
-            io.emit('answer_result', { tipo: q.tipo, correta: gabarito });
-            
-            // Aguarda 4 segundos e chama a próxima pergunta
-            setTimeout(nextQuestion, 4000); 
+            finishQuestion(room.id);
         }
     });
 
-    // Evento de desconexão
     socket.on('disconnect', () => {
-        console.log('Usuário desconectado:', socket.id);
-        delete players[socket.id];
-        io.emit('update_players', Object.values(players));
+        const mapping = socketMapping[socket.id];
+        if (!mapping) return;
+        const room = rooms[mapping.roomId];
+        const player = room.players[mapping.playerId];
         
-        // Se a sala esvaziar completamente no meio do jogo, reseta para LOBBY
-        if (Object.keys(players).length === 0) gameState = 'LOBBY';
+        if (player) player.online = false;
+        delete socketMapping[socket.id];
+
+        const activePlayers = Object.values(room.players).filter(p => p.online);
+
+        if (activePlayers.length === 0) {
+            // Se todos desconectaram, destrói a sala e o timer
+            clearTimeout(room.timer);
+            delete rooms[room.id];
+        } else {
+            io.to(room.id).emit('update_players', Object.values(room.players));
+            // Se a partida está rolando e quem sobrou já respondeu, finaliza a questão
+            if (room.gameState === 'WAITING_ANSWERS' && activePlayers.every(p => p.answered)) {
+                finishQuestion(room.id);
+            }
+        }
     });
 });
 
-// Funções utilitárias de roteamento das perguntas
-function sendQuestion() {
-    // Reseta o status de resposta para a nova rodada
-    for(let id in players) players[id].answered = false;
+function sendQuestion(roomId) {
+    const room = rooms[roomId];
+    if(!room || room.gameState !== 'PLAYING') return;
+
+    room.gameState = 'WAITING_ANSWERS';
+    for(let id in room.players) room.players[id].answered = false;
     
-    const q = currentQuestions[currentQuestionIndex];
+    const q = room.currentQuestions[room.currentQuestionIndex];
     let opcoesEmbaralhadas = null;
     
     if (q.tipo === 'objetiva') {
@@ -246,31 +316,59 @@ function sendQuestion() {
         opcoesEmbaralhadas = shuffleArray(opcoesObjetos);
     }
 
-    io.emit('new_question', {
-        index: currentQuestionIndex + 1,
-        total: currentQuestions.length,
+    // 30 segundos objetiva, 90 segundos dissertativa
+    const duration = q.tipo === 'objetiva' ? 30 : 90;
+    room.timeLeft = duration;
+
+    io.to(roomId).emit('new_question', {
+        index: room.currentQuestionIndex + 1,
+        total: room.currentQuestions.length,
         tipo: q.tipo,
         pergunta: q.pergunta,
-        // Envia apenas o texto das opções para o front, sem a resposta correta
-        opcoes: q.tipo === 'objetiva' ? opcoesEmbaralhadas.map(o => o.texto) : null 
+        opcoes: q.tipo === 'objetiva' ? opcoesEmbaralhadas.map(o => o.texto) : null,
+        duration: duration
     });
+
+    // Loop do temporizador a cada segundo para o reconnect funcionar bem
+    if(room.timer) clearInterval(room.timer);
+    room.timer = setInterval(() => {
+        room.timeLeft--;
+        if (room.timeLeft <= 0) {
+            finishQuestion(roomId);
+        }
+    }, 1000);
 }
 
-function nextQuestion() {
-    currentQuestionIndex++;
-    if (currentQuestionIndex >= currentQuestions.length) {
-        // Acabaram as questões, exibe o ranking
-        gameState = 'LEADERBOARD';
-        io.emit('game_over', Object.values(players).sort((a, b) => b.score - a.score));
-        gameState = 'LOBBY'; // Libera para jogar de novo
+function finishQuestion(roomId) {
+    const room = rooms[roomId];
+    if(!room || room.gameState !== 'WAITING_ANSWERS') return;
+
+    clearInterval(room.timer);
+    room.gameState = 'SHOWING_RESULT';
+
+    const q = room.currentQuestions[room.currentQuestionIndex];
+    const gabarito = q.tipo === 'objetiva' ? q.opcoes[q.correta] : q.respostaExata;
+    
+    io.to(roomId).emit('answer_result', { tipo: q.tipo, correta: gabarito });
+    
+    setTimeout(() => nextQuestion(roomId), 4000); 
+}
+
+function nextQuestion(roomId) {
+    const room = rooms[roomId];
+    if(!room || room.gameState !== 'SHOWING_RESULT') return;
+
+    room.currentQuestionIndex++;
+    if (room.currentQuestionIndex >= room.currentQuestions.length) {
+        room.gameState = 'LOBBY'; // Volta pro lobby para permitir nova partida
+        for(let id in room.players) room.players[id].isReady = false; 
+        
+        io.to(roomId).emit('game_over', Object.values(room.players).sort((a, b) => b.score - a.score));
     } else {
-        // Envia a próxima
-        sendQuestion();
+        room.gameState = 'PLAYING';
+        sendQuestion(roomId);
     }
 }
 
-// --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

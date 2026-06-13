@@ -174,3 +174,73 @@ input[type="text"], textarea {
     cursor: not-allowed;
     opacity: 0.85;
 }
+
+/* =========================================
+   TEMPORIZADOR NEON
+========================================= */
+.timer-container {
+    width: 100%;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 6px;
+    margin: 15px 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 5px var(--neon-cyan);
+}
+.timer-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--neon-cyan);
+    transition: width 1s linear, background 0.3s;
+}
+.timer-text {
+    position: absolute;
+    top: -2px;
+    right: 5px;
+    font-size: 0.7rem;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+}
+.timer-fill.warning {
+    background: var(--neon-carmine);
+    box-shadow: 0 0 10px var(--neon-carmine);
+}
+
+/* =========================================
+   PÓDIO CYBERPUNK
+========================================= */
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 10px;
+    margin: 2rem 0;
+    height: 180px;
+}
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    color: #fff;
+    font-weight: bold;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding-top: 10px;
+    text-shadow: 0 0 5px rgba(0,0,0,0.8);
+    position: relative;
+    box-shadow: inset 0px 10px 20px rgba(0,0,0,0.5);
+    width: 80px;
+    text-align: center;
+}
+.podium-place span { display: block; }
+.podium-place .avatar { font-size: 2.5rem; margin-bottom: 5px; }
+.podium-place .name { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 90%; }
+.podium-place .score { font-size: 0.8rem; color: var(--neon-cyan); }
+
+.gold { height: 160px; background: linear-gradient(180deg, rgba(255, 215, 0, 0.8) 0%, rgba(0,0,0,0.8) 100%); border: 1px solid gold; box-shadow: 0 0 15px gold;}
+.silver { height: 120px; background: linear-gradient(180deg, rgba(192, 192, 192, 0.8) 0%, rgba(0,0,0,0.8) 100%); border: 1px solid silver;}
+.bronze { height: 90px; background: linear-gradient(180deg, rgba(205, 127, 50, 0.8) 0%, rgba(0,0,0,0.8) 100%); border: 1px solid #cd7f32;}
