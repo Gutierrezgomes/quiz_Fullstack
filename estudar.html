@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modo Estudo - Módulos</title>
+    <title>Hootka! | Modo Estudo</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1 class="glitch-text">MODO DE ESTUDO</h1>
+            <h1 class="glitch-text">MODO ESTUDO</h1>
             <div style="text-align: center; margin-bottom: 2rem;">
-                <a href="index.html" class="action-btn" style="text-decoration: none; display: inline-block; width: auto; padding: 10px 20px;">Voltar para o Jogo (Hootka)</a>
+                <a href="index.html" class="action-btn" style="text-decoration: none; display: inline-block; width: auto; padding: 10px 20px;">
+                    🔙 Voltar para o Hootka!
+                </a>
             </div>
             
-            <nav class="controls">
-                <button id="btn-mod1" class="nav-btn active">Módulo 1 (Questões 1 a 40)</button>
-                <button id="btn-mod2" class="nav-btn">Módulo 2 (Questões 41 a 80)</button>
+            <nav class="controls" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                <button id="btn-mod1" class="action-btn active" style="width: auto;">Módulo 1 (1 a 40)</button>
+                <button id="btn-mod2" class="action-btn" style="width: auto;">Módulo 2 (41 a 80)</button>
             </nav>
         </header>
 
-        <main>
+        <main style="margin-top: 2rem;">
             <div id="quiz-container"></div>
         </main>
     </div>
