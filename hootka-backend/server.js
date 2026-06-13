@@ -120,10 +120,24 @@ function shuffleArray(array) {
     return arr;
 }
 
+// Substitua esta função no seu server.js
 function generateSimulado() {
-    const objetivas = questoesDB.filter(q => q.tipo === 'objetiva').sort(() => 0.5 - Math.random()).slice(0, 10);
-    const dissertativas = questoesDB.filter(q => q.tipo === 'dissertativa').sort(() => 0.5 - Math.random()).slice(0, 4);
-    return [...objetivas, ...dissertativas].sort(() => 0.5 - Math.random());
+    // 1. Pega todas as objetivas e dissertativas
+    let objetivas = questoesDB.filter(q => q.tipo === 'objetiva');
+    let dissertativas = questoesDB.filter(q => q.tipo === 'dissertativa');
+
+    // 2. Embaralha os arrays de forma segura usando o shuffleArray já existente
+    objetivas = shuffleArray(objetivas);
+    dissertativas = shuffleArray(dissertativas);
+
+    // 3. Pega 10 objetivas e 4 dissertativas (ou o máximo disponível se houver menos)
+    const selecionadas = [
+        ...objetivas.slice(0, 10),
+        ...dissertativas.slice(0, 4)
+    ];
+
+    // 4. Embaralha a prova final para misturar os tipos
+    return shuffleArray(selecionadas);
 }
 
 // Configuração do Socket.io para o Front-end
