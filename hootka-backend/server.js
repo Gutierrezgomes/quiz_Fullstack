@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
+const { io } = require("socket.io-client");
 const app = express();
 
 // Configuração de CORS para permitir requisições do seu Github Pages
