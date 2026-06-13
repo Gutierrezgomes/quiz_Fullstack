@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hootka! | Cyber Quiz</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -28,6 +27,12 @@
             </div>
 
             <button id="btn-join" class="action-btn">Entrar na Sala</button>
+
+            <div style="text-align: center; margin-top: 2.5rem;">
+                <a href="estudar.html" style="color: var(--neon-violet); text-decoration: none; font-size: 1.1rem; border-bottom: 1px dashed var(--neon-violet); padding-bottom: 4px; transition: 0.3s;" onmouseover="this.style.color='var(--neon-cyan)'; this.style.borderBottomColor='var(--neon-cyan)';" onmouseout="this.style.color='var(--neon-violet)'; this.style.borderBottomColor='var(--neon-violet)';">
+                    📚 Ir para o Modo de Estudo (Offline)
+                </a>
+            </div>
         </main>
 
         <main id="waiting-screen" class="screen">
@@ -61,10 +66,9 @@
             <button onclick="location.reload()" class="action-btn" style="margin-top: 2rem;">Jogar Novamente</button>
         </main>
     </div>
-    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
-    
-    <script src="script.js"></script>
 
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script src="script.js"></script>
 
 </body>
 </html>
