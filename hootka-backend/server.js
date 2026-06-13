@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const { io } = require("socket.io-client");
 const app = express();
 
 // Configuração de CORS para permitir requisições do seu Github Pages
@@ -136,124 +135,35 @@ function generateSimulado() {
 
     return shuffleArray(selecionadas);
 }
-// Configuração do Socket.io para o Front-end
-const socket = io('https://quiz-fullstack-2nn9.onrender.com');
+// --- LÓGICA DO SERVIDOR ---
+io.on('connection', (socket) => {
+    console.log('Novo usuário conectado:', socket.id);
 
-const screens = {
-    lobby: document.getElementById('lobby-screen'),
-    waiting: document.getElementById('waiting-screen'),
-    game: document.getElementById('game-screen'),
-    leaderboard: document.getElementById('leaderboard-screen')
-};
+    // Evento quando um jogador entra no lobby
+    socket.on('join_game', (data) => {
+        players[socket.id] = {
+            name: data.name,
+            avatar: data.avatar,
+            score: 0
+        };
+        // Avisa a todos quem está na sala
+        io.emit('update_players', Object.values(players));
+    });
 
-function showScreen(screenName) {
-    Object.values(screens).forEach(s => s.classList.remove('active'));
-    screens[screenName].classList.add('active');
-}
+    // Adicione os outros eventos do seu jogo aqui (start_game, submit_answer, etc)
+    // ...
 
-// LÓGICA DO LOBBY
-document.getElementById('btn-join').addEventListener('click', () => {
-    const name = document.getElementById('username').value.trim() || 'Jogador' + Math.floor(Math.random()*1000);
-    const avatar = document.querySelector('input[name="avatar"]:checked').value;
-    
-    socket.emit('join_game', { name, avatar });
-    showScreen('waiting');
-});
-
-// LÓGICA DA SALA DE ESPERA
-socket.on('update_players', (players) => {
-    const list = document.getElementById('players-list');
-    list.innerHTML = '';
-    players.forEach(p => {
-        list.innerHTML += `<div class="player-card">${p.avatar}<br>${p.name}</div>`;
+    // Evento de desconexão
+    socket.on('disconnect', () => {
+        console.log('Usuário desconectado:', socket.id);
+        delete players[socket.id];
+        io.emit('update_players', Object.values(players));
     });
 });
 
-document.getElementById('btn-start').addEventListener('click', () => {
-    socket.emit('start_game');
+// --- INICIALIZAÇÃO DO SERVIDOR ---
+// Isso é obrigatório para o Render saber qual porta escutar!
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
 });
-
-// LÓGICA DO JOGO
-socket.on('game_started', () => {
-    showScreen('game');
-});
-
-socket.on('new_question', (q) => {
-    showScreen('game');
-    document.getElementById('wait-message').classList.add('hidden');
-    document.getElementById('question-counter').innerText = `Q: ${q.index}/${q.total}`;
-    document.getElementById('question-text').innerText = q.pergunta;
-
-    const optContainer = document.getElementById('options-container');
-    const writContainer = document.getElementById('written-container');
-
-    if (q.tipo === 'objetiva') {
-        optContainer.classList.remove('hidden');
-        writContainer.classList.add('hidden');
-        optContainer.innerHTML = '';
-        
-        // Embaralha as alternativas, mas salva a resposta correta internamente para verificação visual
-        const opcoesComIndex = q.opcoes.map((opcao, idx) => ({ texto: opcao, correto: idx === q.correta }));
-        const opcoesEmbaralhadas = shuffleArray(opcoesComIndex);
-        
-        opcoesEmbaralhadas.forEach((opcao, indexLocal) => {
-            const btn = document.createElement('button');
-            btn.className = 'option-btn';
-            btn.innerText = opcao.texto;
-            // Guardamos se a opção é a correta no HTML, e o índice que ela representará no backend
-            btn.dataset.isCorrect = opcao.correto;
-            // Enviamos para o backend a string da alternativa, o backend deve ser ajustado para validar texto
-            btn.onclick = () => enviarResposta(opcao.texto, btn);
-            optContainer.appendChild(btn);
-        });
-    } else {
-        optContainer.classList.add('hidden');
-        writContainer.classList.remove('hidden');
-        document.getElementById('written-answer').value = '';
-    }
-});
-
-function enviarResposta(respostaText, btnClicado = null) {
-    if (btnClicado) {
-        const botoes = document.querySelectorAll('.option-btn');
-        botoes.forEach(b => {
-            b.disabled = true;
-            if (b.dataset.isCorrect === "true") b.classList.add('correct');
-        });
-        
-        if (btnClicado.dataset.isCorrect !== "true") {
-            btnClicado.classList.add('incorrect');
-        }
-    }
-
-    socket.emit('submit_answer', respostaText);
-    document.getElementById('wait-message').classList.remove('hidden');
-    
-    // Esconde a área de digitação nas dissertativas após enviar
-    if(!btnClicado) {
-        document.getElementById('written-container').classList.add('hidden');
-    }
-}
-
-document.getElementById('btn-submit-written').addEventListener('click', () => {
-    const resp = document.getElementById('written-answer').value;
-    enviarResposta(resp);
-});
-
-// RANKING
-socket.on('game_over', (rankedPlayers) => {
-    showScreen('leaderboard');
-    const list = document.getElementById('ranking-list');
-    list.innerHTML = '';
-    
-    rankedPlayers.forEach((p, i) => {
-        list.innerHTML += `
-            <li>
-                <span>${i+1}º ${p.avatar} ${p.name}</span>
-                <span>${p.score} pts</span>
-            </li>
-        `;
-    });
-});
-
-socket.on('error', (msg) => alert(msg));
