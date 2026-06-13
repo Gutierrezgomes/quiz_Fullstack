@@ -151,6 +151,17 @@ function startTimer(duration) {
 
 socket.on('answer_result', (data) => {
     clearInterval(timerInterval);
+
+    // ==========================================
+    // CORREÇÃO: Atualiza os pontos em tempo real na tela!
+    // ==========================================
+    if (data.players) {
+        const me = data.players.find(p => p.id === playerId);
+        if (me) {
+            document.getElementById('my-score').innerText = `Pontos: ${me.score}`;
+        }
+    }
+
     if(data.tipo === 'objetiva') {
         const botoes = document.querySelectorAll('.option-btn');
         botoes.forEach(b => {

@@ -38,7 +38,7 @@
         <main id="waiting-screen" class="screen">
             <h2>Sala de Espera</h2>
             <div id="players-list" class="players-grid"></div>
-            <button id="btn-start" class="action-btn" style="margin-top: 2rem;">INICIAR HOOTKA!</button>
+            <button id="btn-start" class="action-btn" style="margin-top: 2rem;">ESTOU PRONTO!</button>
         </main>
 
         <main id="game-screen" class="screen">
@@ -46,6 +46,12 @@
                 <span id="question-counter">Q: 0/14</span>
                 <span id="my-score">Pontos: 0</span>
             </div>
+            
+            <div class="timer-container">
+                <div id="timer-bar" class="timer-fill"></div>
+                <div id="timer-text" class="timer-text">30s</div>
+            </div>
+
             <h2 id="question-text" class="question-title">Carregando...</h2>
             
             <div id="options-container" class="options-grid"></div>
@@ -62,38 +68,20 @@
 
         <main id="leaderboard-screen" class="screen">
             <h2 class="glitch-text">RANKING FINAL</h2>
+            
+            <div class="podium-container">
+                <div id="podium-2" class="podium-place silver hidden"></div>
+                <div id="podium-1" class="podium-place gold hidden"></div>
+                <div id="podium-3" class="podium-place bronze hidden"></div>
+            </div>
+
             <ul id="ranking-list" class="ranking-list"></ul>
-            <button onclick="location.reload()" class="action-btn" style="margin-top: 2rem;">Jogar Novamente</button>
+            
+            <button id="btn-play-again" class="action-btn" style="margin-top: 2rem;">Jogar Novamente</button>
         </main>
     </div>
 
-    <div class="game-header">
-    <span id="question-counter">Q: 0/14</span>
-    <span id="my-score">Pontos: 0</span>
-</div>
-
-<div class="timer-container">
-    <div id="timer-bar" class="timer-fill"></div>
-    <div id="timer-text" class="timer-text">30s</div>
-</div>
-
-<h2 id="question-text" class="question-title">Carregando...</h2>
-<main id="leaderboard-screen" class="screen">
-    <h2 class="glitch-text">RANKING FINAL</h2>
-    
-    <div class="podium-container">
-        <div id="podium-2" class="podium-place silver hidden"></div>
-        <div id="podium-1" class="podium-place gold hidden"></div>
-        <div id="podium-3" class="podium-place bronze hidden"></div>
-    </div>
-
-    <ul id="ranking-list" class="ranking-list"></ul>
-    
-    <button id="btn-play-again" class="action-btn" style="margin-top: 2rem;">Jogar Novamente</button>
-</main>
-
     <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
     <script src="script.js"></script>
-
 </body>
 </html>

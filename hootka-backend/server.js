@@ -349,7 +349,14 @@ function finishQuestion(roomId) {
     const q = room.currentQuestions[room.currentQuestionIndex];
     const gabarito = q.tipo === 'objetiva' ? q.opcoes[q.correta] : q.respostaExata;
     
-    io.to(roomId).emit('answer_result', { tipo: q.tipo, correta: gabarito });
+    // ==========================================
+    // CORREÇÃO: O servidor agora envia a lista atualizada de jogadores com os pontos
+    // ==========================================
+    io.to(roomId).emit('answer_result', { 
+        tipo: q.tipo, 
+        correta: gabarito,
+        players: Object.values(room.players) // Isso faz os pontos atualizarem lá no script.js
+    });
     
     setTimeout(() => nextQuestion(roomId), 4000); 
 }
