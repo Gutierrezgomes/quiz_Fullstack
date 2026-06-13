@@ -137,7 +137,7 @@ function generateSimulado() {
     return shuffleArray(selecionadas);
 }
 // Configuração do Socket.io para o Front-end
-const socket = io ('https://quiz-fullstack-2nn9.onrender.com');
+const socket = io('https://quiz-fullstack-2nn9.onrender.com');
 
 const screens = {
     lobby: document.getElementById('lobby-screen'),
