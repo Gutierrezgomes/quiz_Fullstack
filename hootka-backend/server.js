@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const app = express();
 
-// 1. Libera o CORS para o seu GitHub Pages no Express
+// Configuração de CORS para permitir requisições do seu Github Pages
 app.use(cors({
     origin: "https://gutierrezgomes.github.io",
     methods: ["GET", "POST"]
@@ -13,7 +13,7 @@ app.use(cors({
 
 const server = http.createServer(app);
 
-// 2. Libera o CORS para o seu GitHub Pages no Socket.IO
+// Configuração do Socket.IO com CORS
 const io = new Server(server, {
     cors: { 
         origin: "https://gutierrezgomes.github.io",
@@ -111,6 +111,8 @@ const questoesDB = [
     { id: 80, tipo: 'dissertativa', pergunta: "Qual é a lição pedagógica do livro ao apresentar três projetos com complexidade crescente?", respostaExata: "Mostrar como os mesmos conceitos (CRUD, banco, segurança, frontend/backend) se aplicam evoluindo de Node.js + HTML simples, passando por MVC com Java, até atingir o padrão SPA React + Spring Boot + JWT." }
 ];
 
+
+// Função auxiliar para embaralhar os arrays (Fisher-Yates)
 function shuffleArray(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -120,23 +122,22 @@ function shuffleArray(array) {
     return arr;
 }
 
-// Substitua esta função no seu server.js
+// Lógica principal do servidor para gerar a prova e verificar as respostas
 function generateSimulado() {
-    // 1. Pega todas as objetivas e dissertativas
     let objetivas = questoesDB.filter(q => q.tipo === 'objetiva');
     let dissertativas = questoesDB.filter(q => q.tipo === 'dissertativa');
 
-    // 2. Embaralha os arrays de forma segura usando o shuffleArray já existente
+    // Embaralha as questões de forma segura
     objetivas = shuffleArray(objetivas);
     dissertativas = shuffleArray(dissertativas);
 
-    // 3. Pega 10 objetivas e 4 dissertativas (ou o máximo disponível se houver menos)
+    // Pega 10 objetivas e 4 dissertativas
     const selecionadas = [
         ...objetivas.slice(0, 10),
         ...dissertativas.slice(0, 4)
     ];
 
-    // 4. Embaralha a prova final para misturar os tipos
+    // Embaralha a prova final para misturar os tipos de questão
     return shuffleArray(selecionadas);
 }
 
