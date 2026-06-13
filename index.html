@@ -3,27 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Full-Stack | Terminal</title>
+    <title>Hootka! | Cyber Quiz</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1 class="glitch-text">SYS.QUIZ_FULLSTACK</h1>
-            <nav class="controls">
-                <button id="btn-todas" class="nav-btn active">Banco de Questões</button>
-                <button id="btn-simulado" class="nav-btn">Gerar Simulado (20 Qs)</button>
-            </nav>
+            <h1 class="glitch-text">HOOTKA!</h1>
         </header>
 
-        <main>
-            <div id="status-panel" class="status-panel hidden">
-                <p>Status: <span id="simulado-stats">Ativo</span></p>
-                <button id="btn-finalizar" class="action-btn hidden">Finalizar Simulado</button>
+        <main id="lobby-screen" class="screen active">
+            <h2>Crie seu Perfil</h2>
+            <input type="text" id="username" placeholder="Digite seu Nickname" maxlength="15">
+            
+            <h3>Escolha seu Avatar</h3>
+            <div class="avatar-selection">
+                <label><input type="radio" name="avatar" value="🤖" checked> 🤖</label>
+                <label><input type="radio" name="avatar" value="👾"> 👾</label>
+                <label><input type="radio" name="avatar" value="👽"> 👽</label>
+                <label><input type="radio" name="avatar" value="💀"> 💀</label>
+                <label><input type="radio" name="avatar" value="👻"> 👻</label>
+                <label><input type="radio" name="avatar" value="🦊"> 🦊</label>
+            </div>
+
+            <button id="btn-join" class="action-btn">Entrar na Sala</button>
+        </main>
+
+        <main id="waiting-screen" class="screen">
+            <h2>Sala de Espera</h2>
+            <div id="players-list" class="players-grid"></div>
+            <button id="btn-start" class="action-btn" style="margin-top: 2rem;">INICIAR HOOTKA!</button>
+        </main>
+
+        <main id="game-screen" class="screen">
+            <div class="game-header">
+                <span id="question-counter">Q: 0/14</span>
+                <span id="my-score">Pontos: 0</span>
+            </div>
+            <h2 id="question-text" class="question-title">Carregando...</h2>
+            
+            <div id="options-container" class="options-grid"></div>
+
+            <div id="written-container" class="hidden">
+                <textarea id="written-answer" class="dissertativa-input" placeholder="Digite sua resposta..."></textarea>
+                <button id="btn-submit-written" class="action-btn">Enviar Resposta</button>
             </div>
             
-            <div id="quiz-container">
-                </div>
+            <div id="wait-message" class="hidden" style="text-align:center; color: var(--neon-cyan); margin-top:1rem;">
+                Aguardando outros jogadores...
+            </div>
+        </main>
+
+        <main id="leaderboard-screen" class="screen">
+            <h2 class="glitch-text">RANKING FINAL</h2>
+            <ul id="ranking-list" class="ranking-list"></ul>
+            <button onclick="location.reload()" class="action-btn" style="margin-top: 2rem;">Jogar Novamente</button>
         </main>
     </div>
 

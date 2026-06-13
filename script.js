@@ -1,5 +1,123 @@
 // Banco de dados com as 80 questões do documento
 // TODAS as 80 questões estão no formato objetivo (múltipla escolha) com alternativas completas.
+
+// ATENÇÃO: Troque esta URL pela URL do Render quando colocar o backend no ar.
+// Exemplo: const socket = io('https://hootka-backend.onrender.com');
+const socket = io('http://localhost:3000'); 
+
+// Mapeamento de Telas
+const screens = {
+    lobby: document.getElementById('lobby-screen'),
+    waiting: document.getElementById('waiting-screen'),
+    game: document.getElementById('game-screen'),
+    leaderboard: document.getElementById('leaderboard-screen')
+};
+
+function showScreen(screenName) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[screenName].classList.add('active');
+}
+
+// --- LÓGICA DO LOBBY ---
+document.getElementById('btn-join').addEventListener('click', () => {
+    const name = document.getElementById('username').value.trim() || 'Jogador' + Math.floor(Math.random()*1000);
+    const avatar = document.querySelector('input[name="avatar"]:checked').value;
+    
+    socket.emit('join_game', { name, avatar });
+    showScreen('waiting');
+});
+
+// --- LÓGICA DA SALA DE ESPERA ---
+socket.on('update_players', (players) => {
+    const list = document.getElementById('players-list');
+    list.innerHTML = '';
+    players.forEach(p => {
+        list.innerHTML += `<div class="player-card">${p.avatar}<br>${p.name}</div>`;
+    });
+});
+
+document.getElementById('btn-start').addEventListener('click', () => {
+    socket.emit('start_game');
+});
+
+// --- LÓGICA DO JOGO ---
+let myScore = 0;
+
+socket.on('game_started', () => {
+    showScreen('game');
+});
+
+socket.on('new_question', (q) => {
+    showScreen('game');
+    document.getElementById('wait-message').classList.add('hidden');
+    document.getElementById('question-counter').innerText = `Q: ${q.index}/${q.total}`;
+    document.getElementById('question-text').innerText = q.pergunta;
+
+    const optContainer = document.getElementById('options-container');
+    const writContainer = document.getElementById('written-container');
+
+    if (q.tipo === 'objetiva') {
+        optContainer.classList.remove('hidden');
+        writContainer.classList.add('hidden');
+        optContainer.innerHTML = '';
+        
+        q.opcoes.forEach((opcao, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opcao;
+            btn.onclick = () => enviarResposta(index, btn);
+            optContainer.appendChild(btn);
+        });
+    } else {
+        optContainer.classList.add('hidden');
+        writContainer.classList.remove('hidden');
+        document.getElementById('written-answer').value = '';
+    }
+});
+
+function enviarResposta(resposta, btnClicado = null) {
+    if (btnClicado) {
+        // Pinta a opção selecionada para dar feedback visual temporário
+        const botoes = document.querySelectorAll('.option-btn');
+        botoes.forEach(b => b.disabled = true);
+        btnClicado.style.borderColor = "var(--neon-violet)";
+        btnClicado.style.backgroundColor = "rgba(138, 43, 226, 0.2)";
+    }
+
+    socket.emit('submit_answer', resposta);
+    document.getElementById('wait-message').classList.remove('hidden');
+    document.getElementById('options-container').classList.add('hidden');
+    document.getElementById('written-container').classList.add('hidden');
+}
+
+document.getElementById('btn-submit-written').addEventListener('click', () => {
+    const resp = document.getElementById('written-answer').value;
+    enviarResposta(resp);
+});
+
+// Atualiza placar em tempo real (baseado no que o servidor disser depois, opcional)
+// Para simplificar, só mostramos no fim.
+
+// --- LÓGICA DO LEADERBOARD ---
+socket.on('game_over', (rankedPlayers) => {
+    showScreen('leaderboard');
+    const list = document.getElementById('ranking-list');
+    list.innerHTML = '';
+    
+    rankedPlayers.forEach((p, i) => {
+        list.innerHTML += `
+            <li>
+                <span>${i+1}º ${p.avatar} ${p.name}</span>
+                <span>${p.score} pts</span>
+            </li>
+        `;
+    });
+});
+
+socket.on('error', (msg) => {
+    alert(msg);
+});
+
 const questoesDB = [
     // CONFIGURAÇÃO DO AMBIENTE
     { id: 1, tipo: 'objetiva', pergunta: "Qual ferramenta é recomendada para instalar e gerenciar múltiplas versões do Node.js?", opcoes: ["O npm (Node Package Manager).", "O nvm (Node Version Manager). No Linux/Mac instala-se via curl e permite trocar de versão facilmente com nvm use --lts.", "O npx, utilizado para executar dependências temporárias.", "O Yarn, que substitui o Node.js."], correta: 1 },
