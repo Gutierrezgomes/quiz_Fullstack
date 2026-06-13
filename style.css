@@ -148,3 +148,29 @@ input[type="text"], textarea {
 .ranking-list li:nth-child(1) { border-color: gold; color: gold; }
 .ranking-list li:nth-child(2) { border-color: silver; color: silver; }
 .ranking-list li:nth-child(3) { border-color: #cd7f32; color: #cd7f32; }
+
+/* =========================================
+   CORES DE VALIDAÇÃO (CERTO E ERRADO)
+========================================= */
+
+/* Estilo para a resposta Correta (Verde Néon) */
+.option-btn.correct {
+    background-color: rgba(0, 255, 0, 0.15) !important;
+    border-color: #00ff00 !important;
+    color: #00ff00 !important;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5) !important;
+}
+
+/* Estilo para a resposta Errada (Vermelho/Carmim Néon) */
+.option-btn.incorrect {
+    background-color: rgba(255, 0, 76, 0.15) !important;
+    border-color: #ff004c !important;
+    color: #ff004c !important;
+    box-shadow: 0 0 15px rgba(255, 0, 76, 0.5) !important;
+}
+
+/* Melhora o aspeto dos botões desativados (para não ficarem com aquele cinzento padrão do navegador) */
+.option-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.85;
+}
